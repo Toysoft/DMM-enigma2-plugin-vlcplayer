@@ -169,8 +169,9 @@ typedef struct UrlComponents
 int splitUrl(std::string url, UrlComponents& components)
 {
 	size_t proto = url.find("://");
-    if (proto == std::string::npos)
-        return -1;
+	if (proto == std::string::npos)
+		return -1;
+
 	components.protocol = url.substr(0, proto);
 	url = url.substr(proto+3);
     
@@ -227,6 +228,7 @@ int eServiceTS::openHttpConnection(std::string url)
 	if (connect(fd, (sockaddr*)&addr, sizeof(addr)) == -1) {
 		std::string msg = "connect failed for: " + url;
 		eDebug(msg.c_str());
+		close(fd);
 		return -1;
 	}
 
@@ -246,7 +248,13 @@ int eServiceTS::openHttpConnection(std::string url)
 	request.append("Connection: close\n");
 	request.append("\n");
 	//eDebug(request.c_str());
-	write(fd, request.c_str(), request.length());
+
+	size_t length = request.length();
+	if (write(fd, request.c_str(), length) != (ssize_t)length) {
+		eDebug("[VLC] incomplete write!");
+		close(fd);
+		return -1;
+	}
 
 	int rc;
 	size_t buflen = 1000;
@@ -596,7 +604,7 @@ bool eStreamThread::scanAudioInfo(unsigned char buf[], int len)
 	if (len < 1880)
 		return false;
 
-	int adaptfield, pmtpid, offset;
+	int adaptfield, offset;
 	unsigned char pmt[1188];
 	int pmtsize = 0;
 
@@ -623,7 +631,6 @@ bool eStreamThread::scanAudioInfo(unsigned char buf[], int len)
 			continue;
 		}
 
-		pmtpid = (0x1F & buf[a + 1])<<8 | (0xFF & buf[a + 2]);
 		memcpy(pmt + pmtsize, buf + a + 4 + offset, 184 - offset);
 		pmtsize += 184 - offset;
 
