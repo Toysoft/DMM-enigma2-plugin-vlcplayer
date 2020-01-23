@@ -789,8 +789,23 @@ void eStreamThread::thread_finished() {
 
 eAutoInitPtr<eServiceFactoryTS> init_eServiceFactoryTS(eAutoInitNumbers::service+1, "eServiceFactoryTS");
 
+#if PY_MAJOR_VERSION <= 2
+
 PyMODINIT_FUNC
 initservicets(void)
 {
 	Py_InitModule("servicets", NULL);
 }
+
+#else
+
+static struct PyModuleDef moduledef = {
+	PyModuleDef_HEAD_INIT, "servicets", 0, -1,
+};
+
+PyObject *PyInit_servicets()
+{
+	return PyModule_Create(&moduledef);
+}
+
+#endif
